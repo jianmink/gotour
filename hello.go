@@ -28,7 +28,7 @@ func main() {
 	fmt.Println("hello world")
 
 	embed()
-	app.WaitResponse()
+	app.WaitResponsePlus2()
 	//app.WaitResponse2()
 
 	q := make(chan string, 3) // 3 requests
