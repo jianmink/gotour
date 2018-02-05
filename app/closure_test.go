@@ -6,6 +6,12 @@ import (
 	"fmt"
 )
 
+
+func Test_boundary(t *testing.T) {
+	a := make([] int, 1)
+	a[2] = 3
+}
+
 func Test_adder(t *testing.T) {
 	pos, neg := adder(), adder()
 	for i := 0; i < 10; i++ {

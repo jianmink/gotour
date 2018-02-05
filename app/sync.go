@@ -8,10 +8,10 @@ import (
 	"fmt"
 )
 
-// start worker then wait from response from worker,
+// WaitResponsePlus2 start worker then wait from response from worker,
 // otherwise time out in 1 second.
-func WaitResponse() {
-	fmt.Println("WaitResponse")
+func WaitResponsePlus2() {
+	fmt.Println("WaitResponsePlus2")
 
 	timeout := make(chan bool, 1)
 	ch := make(chan int)
@@ -46,7 +46,6 @@ func WaitResponse2() {
 		fmt.Println("time out")
 		return
 	}
-
 }
 
 func Worker(ch chan int) {
