@@ -12,7 +12,7 @@ func Sum(a, b int) (int) {
 	return a + b
 }
 
-func embed() {
+func embed() (int, error){
 	type Job struct {
 		Command string
 		*log.Logger
@@ -20,6 +20,8 @@ func embed() {
 
 	job := &Job{"hello", log.New(os.Stderr, "Job: ", log.Ldate)}
 	job.Println("doom")
+
+	return 0, nil
 }
 
 func main() {
