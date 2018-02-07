@@ -1,7 +1,12 @@
 package app
 
-import "testing"
+import (
+	"testing"
+	"fmt"
+)
 
-func TestFsmCan(t *testing.T) {
-	FsmCan()
+func TestNewMyFSM(t *testing.T) {
+	fsm := NewMyFSM()
+	fmt.Println(fsm.Current())
+	fsm.Event("open")
 }

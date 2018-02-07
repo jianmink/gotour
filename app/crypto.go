@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 )
 
+
 // KDF key derivation function
 // S = FC || P0 || L0 || P1 || L1 || P2 || L2 || P3 || L3 ||... || Pn || Ln
 // HMAC-SHA-256 (key, S)

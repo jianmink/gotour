@@ -12,7 +12,9 @@ func Sum(a, b int) (int) {
 	return a + b
 }
 
+
 func embed() (int, error){
+
 	type Job struct {
 		Command string
 		*log.Logger
