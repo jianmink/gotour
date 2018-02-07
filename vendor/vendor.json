@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "3WgIFhMjxovoWoYoxPZP7MXpQ7Q=",
+			"path": "github.com/looplab/fsm",
+			"revision": "8def87414f14eaa69e4ee40abd20a7c195cea6f4",
+			"revisionTime": "2018-01-16T11:52:15Z"
+		}
+	],
+	"rootPath": "github.com/jianmink/gotour"
+}
