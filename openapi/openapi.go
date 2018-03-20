@@ -9,7 +9,7 @@ import (
 func DecodeSpec(s string) error {
 	// paths and components are must in openAPI spec 3.0
 	type Spec struct {
-		Paths map[string]*json.RawMessage `json:"paths"`
+		Paths map[string]*json.RawMessage `json:"paths,omitempty"`
 		Components struct {
 			Schemas map[string]*json.RawMessage `json:"schemas"`
 		} `json:"components"`
@@ -36,7 +36,8 @@ func DecodeSpec(s string) error {
 		//DecodeJsonMap(*v)
 
 		// decode schema
-		DecodeSchema(k, string(*v))
+		r := DecodeSchema(k, string(*v))
+		fmt.Println(r)
 
 	}
 

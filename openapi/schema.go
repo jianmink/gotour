@@ -13,7 +13,11 @@ var GoType  = map[string]string{
 
 func DecodeSchema (name string, p string) string {
 	//fmt.Printf("schema %v\n", name)
-	d,_ := DecodeJsonMap([]byte(p))
+	d,err := DecodeJsonMap([]byte(p))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
 
 	t := strings.Trim(string(*d["type"])," \"")
 	switch t {
@@ -53,7 +57,7 @@ func decodeStructSchema(name string, p string) string {
 	}
 
 	//fmt.Printf("\n%v\n", goStruct(name, fields))
-	return "\n"+goStruct(name, fields)+"\n"
+	return "\n"+goStruct(name, fields, data.Required)+"\n"
 }
 
 func decodeType (s string) (error,string){
@@ -64,26 +68,57 @@ func decodeType (s string) (error,string){
 		return err, ""
 	}
 
-	t := string(*data["type"])
+	for k, v := range data {
+		tmp := string(*v)
+		tmp = strings.Trim(tmp, "\"")
+		if k == "type" {
+			switch tmp {
+			case "string":
+				return nil, "string"
+			default:
+				return nil, tmp
+			}
+		}
 
-	switch t{
-	case "string":
-		return nil, "string"
-	default:
-		return nil, t
+		if k == "$ref" {
+			s := strings.Split(tmp,"/")
+			return nil, s[len(s)-1]
+		}
+
 	}
 
 	return nil, ""
 }
 
 
-func goStruct (name string, fields map[string]string) string {
+func goStruct (name string, fields map[string]string, required []string) string {
 	t := fmt.Sprintf("type %v struct { \n", name)
 
 	for k, v := range fields {
-		t += "\t"+k + "\t" + v
+
+		if has(k, required) {
+			s := fmt.Sprintf("\t%v\t%v\t `json:\"%v\"`\n", upper(k), v, k)
+			t += s
+		} else {
+			s := fmt.Sprintf("\t%v\t%v\t `json:\"%v,omitempty\"`\n", upper(k), v, k)
+			t += s
+		}
 	}
 
 	t += "\n}"
 	return t
+}
+
+
+func upper(s string) string {
+	return strings.ToUpper(s[0:1]) + s[1:]
+}
+
+func has(str string, list []string) bool {
+	for _, v := range list {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }

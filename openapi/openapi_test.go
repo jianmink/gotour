@@ -42,7 +42,7 @@ var specJSON = `{
 			"EapPayload" : {
 					"type" : "string",
 					"format" : "byte"
-				  },
+			}
 		}
 	}
 
@@ -98,7 +98,7 @@ func TestDecodeSchema3(t *testing.T) {
 			"accessType" : {
 			  "$ref" : "#/components/schemas/AccessType"
 			}
-		}
+		},
 		"required" : [ "accessType" ]
 	}`
 
