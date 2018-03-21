@@ -29,6 +29,13 @@ func DecodeSpecFile(sf string, df string) error {
 }
 
 func DecodeSpec(s string) ([]string, error) {
+
+	// reset types create from the spec
+	typesNew = map[string]string {
+
+	}
+
+
 	// paths and components are must in openAPI spec 3.0
 	type Spec struct {
 		Paths map[string]*json.RawMessage `json:"paths,omitempty"`
@@ -59,7 +66,16 @@ func DecodeSpec(s string) ([]string, error) {
 		//fmt.Println(r)
 	}
 
+	// add [] for ref of array type
+
+
 	return a, err
+}
+
+func addArrayMark(a string, t string ) string {
+
+
+	return ""
 }
 
 
