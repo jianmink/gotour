@@ -4,9 +4,31 @@ import "fmt"
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"strings"
 	)
 
-func DecodeSpec(s string) error {
+func DecodeSpecFile(sf string, df string) error {
+
+	b,err := ioutil.ReadFile(sf)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+
+	a,err := DecodeSpec(string(b))
+
+	if df != "" {
+		tmp := []string{"package openapi"}
+		a = append (tmp, a...)
+		return ioutil.WriteFile(df, []byte(strings.Join(a, "\n")), 0644)
+	}
+
+	fmt.Println(strings.Join(a, "\n"))
+	return nil
+}
+
+func DecodeSpec(s string) ([]string, error) {
 	// paths and components are must in openAPI spec 3.0
 	type Spec struct {
 		Paths map[string]*json.RawMessage `json:"paths,omitempty"`
@@ -18,7 +40,7 @@ func DecodeSpec(s string) error {
 	var data Spec
 	err := json.Unmarshal([]byte(s), &data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//for k, v := range data.Paths {
@@ -30,51 +52,15 @@ func DecodeSpec(s string) error {
 	//
 	//}
 
+	var a []string
 	for k, v := range data.Components.Schemas {
-		//fmt.Printf("component[%v] \n", k)
-
-		//DecodeJsonMap(*v)
-
-		// decode schema
 		r := DecodeSchema(k, string(*v))
-		fmt.Println(r)
-
+		a = append(a,r)
+		//fmt.Println(r)
 	}
 
-
-	return nil
+	return a, err
 }
-
-
-func decodeOperation (op,s string) error {
-
-	fmt.Printf("op(%v), s(%v)", op, s)
-
-	var data map[string]*json.RawMessage
-	err := json.Unmarshal([]byte(s), &data)
-	if err != nil {
-		fmt.Errorf("error: %v", err.Error())
-		return err
-	}
-
-	fmt.Printf("operationId (%v)", string(*data["operationId"]))
-
-	//decode requestBody
-	//rb := data["requestBody"]
-	//
-	//type Fields struct {
-	//	Content struct {
-	//		Format struct {
-	//			Schema string `json:"schema"`
-	//		} `json:"application/json"`
-	//	}  `json:"content"`
-	//}
-
-	//decode responses
-
-	return nil
-}
-
 
 
 func DecodeJsonMap(v  []byte) (map[string]*json.RawMessage, error){

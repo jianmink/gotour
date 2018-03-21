@@ -2,9 +2,8 @@ package openapi
 
 import (
 	"testing"
-	//"encoding/json"
-	//"fmt"
 	"fmt"
+	"strings"
 )
 
 var specJSON = `{
@@ -49,60 +48,17 @@ var specJSON = `{
 }`
 
 func TestSpec(t *testing.T) {
-	err := DecodeSpec(specJSON)
+	a, err := DecodeSpec(specJSON)
 	if err != nil {
 		t.Error(err.Error())
 	}
+	fmt.Println(strings.Join(a,"\n"))
 }
 
-func TestDecodeSchema1(t *testing.T) {
-	p := `{
-		"type" : "object",
-		"properties" : {
-			"authType" : {
-			"type" : "string",
-			"enum" : [ "5G-AKA", "EAP-AKA-PRIME" ]
-			}
-		},
-		"required" : [ "authType" ]
-	}`
-
-	r := DecodeSchema("AuthType", p)
-
-	fmt.Println(r)
+func TestDecodeSpecFile(t *testing.T) {
+	DecodeSpecFile("udm_auth.json","udm.go")
 }
 
-
-func TestDecodeSchema2(t *testing.T) {
-	p := `{
-			"type" : "string",
-			"format" : "byte"
-		  }`
-
-	r := DecodeSchema("EapPayload", p)
-
-	want := "\ntype EapPayload string"
-
-	if r != want {
-		t.Errorf("want %v, get %v", want, r)
-	}
-}
-
-func TestDecodeSchema3(t *testing.T) {
-	p := `{
-		"type" : "object",
-		"properties" : {
-			"servingNetworkName" : { 
-				"type" : "string"
-			},
-			"accessType" : {
-			  "$ref" : "#/components/schemas/AccessType"
-			}
-		},
-		"required" : [ "accessType" ]
-	}`
-
-	r := DecodeSchema("AuthenticationInfoRequest", p)
-
-	fmt.Println(r)
+func TestDecodeSpecFile2(t *testing.T) {
+	DecodeSpecFile("oafish_ausf-nausf_ue_authentication_service_v3_swagger.json", "ausf.go")
 }

@@ -9,6 +9,11 @@ import (
 
 var GoType  = map[string]string{
 	"string": "string",
+	"integer": "int",
+	"boolean": "bool",
+	"array":   "array",   //todo, not support array yet
+	"object":  "struct",
+	"number":  "float",   //todo, not support number yet
 }
 
 func DecodeSchema (name string, p string) string {
@@ -18,8 +23,14 @@ func DecodeSchema (name string, p string) string {
 		fmt.Println(err.Error())
 	}
 
-
-	t := strings.Trim(string(*d["type"])," \"")
+	t := ""
+	if v,ok := d["type"]; ok {
+		t = strings.Trim(string(*v), " \"")
+	} else {
+		//fmt.Println("shcema has no explicitly type ")
+		t = "object"  //tmp solution: need to check if openapi support implicit type.
+		//return ""
+	}
 	switch t {
 	case "object":
 		return decodeStructSchema(name, p)
@@ -109,9 +120,14 @@ func goStruct (name string, fields map[string]string, required []string) string 
 	return t
 }
 
-
 func upper(s string) string {
-	return strings.ToUpper(s[0:1]) + s[1:]
+	r := strings.ToUpper(s[0:1]) + s[1:]
+	d := r[0]
+	if d>='0' && d<='9' {
+		r = "A" + r
+	}
+
+	return r
 }
 
 func has(str string, list []string) bool {
