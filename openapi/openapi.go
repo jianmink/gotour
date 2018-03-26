@@ -6,29 +6,65 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"strings"
-	)
+	"github.com/ghodss/yaml"
+	"path/filepath"
+	"errors"
+)
+
+
+func yaml2json(y []byte) []byte {
+	j, err := yaml.YAMLToJSON(y)
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return nil
+	}
+
+	return j
+}
 
 func DecodeSpecFile(sf string, df string) error {
-
 	b,err := ioutil.ReadFile(sf)
 	if err != nil {
 		fmt.Println(err.Error())
 		return err
 	}
 
+	// support both .json and .yaml/.yml
+	switch ext:=filepath.Ext(sf); ext {
+	case ".json":
+		break
+	case ".yaml":
+		b = yaml2json(b)
+	case ".yml":
+		b = yaml2json(b)
+	default:
+		err := errors.New(fmt.Sprintf("Unsupport file extension %v", ext))
+		fmt.Println(err.Error())
+		return err
+	}
+
 	a,err := DecodeSpec(string(b))
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+
+	var a1 []string
+	for _, v := range a {
+		a1 = append(a1, v.String())
+	}
 
 	if df != "" {
 		tmp := []string{"package openapi"}
-		a = append (tmp, a...)
-		return ioutil.WriteFile(df, []byte(strings.Join(a, "\n")), 0644)
+		a2 := append (tmp, a1...)
+		return ioutil.WriteFile(df, []byte(strings.Join(a2, "\n")), 0644)
 	}
-
-	fmt.Println(strings.Join(a, "\n"))
+	//
+	//fmt.Println(strings.Join(a, "\n"))
 	return nil
 }
 
-func DecodeSpec(s string) ([]string, error) {
+func DecodeSpec(s string) ([]TJsonStruct, error) {
 
 	// reset types create from the spec
 	typesNew = map[string]string {
@@ -59,15 +95,22 @@ func DecodeSpec(s string) ([]string, error) {
 	//
 	//}
 
-	var a []string
+	var a []TJsonStruct
 	for k, v := range data.Components.Schemas {
 		r := DecodeSchema(k, string(*v))
 		a = append(a,r)
-		//fmt.Println(r)
 	}
 
-	// add [] for ref of array type
-
+	// set TJsonStruct.IsStruct
+	for i, t1 := range a {
+		for j,f1 := range t1.Fields {
+			for _, t2 := range a {
+				if f1.Type == t2.Name && t2.Fields != nil {
+					a[i].Fields[j].IsStructType = true
+				}
+			}
+		}
+	}
 
 	return a, err
 }

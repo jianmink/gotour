@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 )
 
+
+
 func decodeOperation (op,s string) error {
 
 	//fmt.Printf("op(%v), s(%v)", op, s)

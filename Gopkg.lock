@@ -2,14 +2,26 @@
 
 
 [[projects]]
+  name = "github.com/ghodss/yaml"
+  packages = ["."]
+  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/looplab/fsm"
   packages = ["."]
   revision = "8def87414f14eaa69e4ee40abd20a7c195cea6f4"
 
+[[projects]]
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "7f97868eec74b32b0982dd158a51a446d1da7eb5"
+  version = "v2.1.1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b4ef7c37eb431cb3d0d7aae0152bd52c2ed4af99495e065d79b938a9f3304c65"
+  inputs-digest = "09378bfd97428b61d5fd8ddf910149e8b7528e7b6f654b0ff8c5a91d979dde24"
   solver-name = "gps-cdcl"
   solver-version = 1

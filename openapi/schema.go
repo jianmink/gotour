@@ -31,14 +31,29 @@ type TJsonField struct{
 	Object string
 	Type string
 	Tag string
+	IsStructType bool
+	IsMust	bool
+	IsArray bool
 }
 
 type TJsonStruct struct{
 	Name string
-	JsonField []TJsonField
+
+	Fields []TJsonField  //for type xxx struct
+
+	Type string   //for built-in type
 }
 
-func DecodeSchema (name string, p string) string {
+
+func IsStuctBlob(b string ) bool {
+	if strings.ContainsAny(b, "properties") {
+		return true
+	}
+
+	return false
+}
+
+func DecodeSchema (name string, p string) TJsonStruct {
 	//fmt.Printf("schema %v\n", name)
 	d,err := DecodeJsonMap([]byte(p))
 	if err != nil {
@@ -56,17 +71,59 @@ func DecodeSchema (name string, p string) string {
 	case "object":
 		return decodeStruct(name, p)
 	case "array":
-		return decodeArray(name, p)
+		// field or struct
+		if IsStuctBlob(p) {
+			return decodeArrayStruct(name, p)
+		} else {
+			fmt.Println("a standalone schema shal be an field")
+		}
+
 	default:
 	}
 
-	r := fmt.Sprintf("\ntype %v %v", renameType(name), GoType[t])
+	r := TJsonStruct{
+		Name: renameType(name),
+		Type: GoType[t],
+	}
 
 	return r
 }
 
 
-func decodeArray(name,p string) string{
+func (t *TJsonStruct)String()string{
+	if t.Type != "" {
+		return fmt.Sprintf("\ntype %v %v \n", t.Name, t.Type)
+	}
+
+	var str string
+	if t.Fields != nil {
+		str = fmt.Sprintf("type %v struct { \n", t.Name)
+
+		for _,f := range t.Fields {
+			theType := f.Type
+
+
+			if f.IsStructType && !f.IsMust && !f.IsArray {
+				theType = "*" + theType
+			}
+
+			if f.IsArray {
+				theType = "[]"+theType
+			}
+
+
+			str += fmt.Sprintf(
+				"\t%-20v%-20v %v\n", f.Object, theType, f.Tag)
+
+		}
+
+		str += "\n}"
+	}
+
+	return str
+}
+
+func decodeArrayStruct(name,p string) TJsonStruct{
 	var data struct {
 		Type       string `json:"type"`
 		Items json.RawMessage `json:"items"`
@@ -75,7 +132,7 @@ func decodeArray(name,p string) string{
 	err := json.Unmarshal([]byte(p), &data)
 	if err != nil {
 		fmt.Printf("error: %v\n", err.Error())
-		return ""
+		return TJsonStruct{}
 	}
 
 	r := DecodeSchema(name, string(data.Items))
@@ -86,7 +143,7 @@ func decodeArray(name,p string) string{
 	//return r + "\n" + goArray(name, name)
 }
 
-func decodeStruct(name string, p string) string {
+func decodeStruct(name string, p string) TJsonStruct {
 	var data struct {
 		Type       string `json:"type"`
 		Properties map[string] *json.RawMessage `json:"properties"`
@@ -95,46 +152,92 @@ func decodeStruct(name string, p string) string {
 	err := json.Unmarshal([]byte(p), &data)
 	if err != nil {
 		fmt.Printf("error: %v\n", err.Error())
-		return ""
+		return TJsonStruct{}
 	}
 
-	var fields = make(map[string]string)
+	var fields = make(map[string]TJsonField)
 	for k,v := range data.Properties {
-		t := decodeType(string(*v))
+		//t,isArray := decodeFieldType(string(*v))
+		t,isArray := decodeFieldType(string(*v))
 
-		fields[k] = t
+		theObject := renameObject(k)
+		theType := renameType(t)
+		theJsonObject := k
+
+		var f = TJsonField{
+			Object:       theObject,
+			Type:         theType,
+			Tag:          "",// fmt.Sprintf("`json:\"%v\"`", theJsonObject),
+			IsStructType: true,
+			IsMust:       false,
+			IsArray: isArray,
+		}
+
+		//fmt.Println(f)
+		if _,ok := JsonType[theType]; ok {
+			f.IsStructType = false
+		}
+
+		if has(theJsonObject, data.Required) {
+			f.IsMust = true
+			f.Tag = fmt.Sprintf("`json:\"%v\"`", theJsonObject)
+		} else {
+			f.IsMust = false
+			f.Tag = fmt.Sprintf("`json:\"%v,omitempty\"`", theJsonObject)
+		}
+
+		f.IsArray = isArray
+
+		fields[k] = f
 	}
 
-	return "\n"+goStruct(name, fields, data.Required)+"\n"
+	return goStruct2(name, fields)
+
+
 }
 
-func decodeType (s string) (string){
+func decodeFieldType (s string) (string, bool){
 	var data map[string]*json.RawMessage
 	err := json.Unmarshal([]byte(s), &data)
 	if err != nil {
 		fmt.Printf("error: %v\n", err.Error())
-		return ""
+		return "", false
 	}
 
+	isArray := false
 	for k, v := range data {
 		tmp := string(*v)
-		tmp = strings.Trim(tmp, "\"")
 		if k == "type" {
+			tmp = strings.Trim(tmp, "\"")
 			if t, ok := GoType[tmp]; ok {
-				return t
+				if t != "array" {
+					return t, false
+				} else {
+					isArray = true
+					continue
+				}
 			} else {
-				return "unknown"
+				return "unknown", false
+			}
+		}
+
+		if k == "items" {
+			if isArray {
+				t0,_ :=decodeFieldType(tmp)
+				// set the type as array
+				return t0,true
 			}
 		}
 
 		if k == "$ref" {
+			tmp = strings.Trim(tmp, "\"")
 			s := strings.Split(tmp,"/")
-			return s[len(s)-1]
+			return s[len(s)-1], false
 		}
 
 	}
 
-	return ""
+	return "", false
 }
 
 func goArray (name string, t string) string {
@@ -148,27 +251,40 @@ func goArray (name string, t string) string {
 	return r
 }
 
-func goStruct (name string, fields map[string]string, required []string) string {
-	t := fmt.Sprintf("type %v struct { \n", renameType(name))
+func goStruct2 (name string, fields map[string]TJsonField ) TJsonStruct {
+	var t TJsonStruct
 
-	for k, v := range fields {
+	t.Name = renameType(name)
 
-		theObject := renameObject(k)
-		theType := renameType(v)
-		theJsonObject := k
-
-		if has(k, required) {
-			s := fmt.Sprintf("\t%v\t%v\t `json:\"%v\"`\n", theObject, theType, theJsonObject)
-			t += s
-		} else {
-			s := fmt.Sprintf("\t%v\t%v\t `json:\"%v,omitempty\"`\n", theObject, theType, theJsonObject)
-			t += s
-		}
+	for _, v := range fields {
+		t.Fields = append(t.Fields, v)
 	}
 
-	t += "\n}"
 	return t
 }
+
+//func goStruct (name string, fields map[string]string, required []string) string {
+//	t := fmt.Sprintf("type %v struct { \n", renameType(name))
+//
+//	for k, v := range fields {
+//
+//		theObject := renameObject(k)
+//		theType := renameType(v)
+//		theJsonObject := k
+//
+//		if has(k, required) {
+//			s := fmt.Sprintf("\t%v\t%v\t `json:\"%v\"`\n", theObject, theType, theJsonObject)
+//			t += s
+//		} else {
+//			s := fmt.Sprintf("\t%v\t%v\t `json:\"%v,omitempty\"`\n", theObject, theType, theJsonObject)
+//			t += s
+//		}
+//	}
+//
+//	t += "\n}"
+//	return t
+//}
+
 
 func renameObject(s string) string {
 

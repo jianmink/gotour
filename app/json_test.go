@@ -17,10 +17,32 @@ type Address struct {
 type MyUser struct {
 	ID       int64     `json:"id"`
 	Name     string    `json:"name,omitempty"`
-	Addr	 *Address  `json:"address,omitempty"`
+	Addr	 []Address  `json:"address,omitempty"`
 	LastSeen time.Time `json:"lastSeen"`
 }
 
+func TestJsonMismatch(t *testing.T) {
+	byt := []byte(`{"ID":2,"Name":"mike"}`)
+	//var dat map[string]interface{}
+	var u2 = MyUser{}
+	json.Unmarshal(byt, &u2)
+
+	fmt.Println(u2)
+}
+
+func TestJsonMarsha0(t *testing.T) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.Encode(
+		&MyUser{ID: 1, LastSeen: time.Now()})
+
+	u1 := &MyUser{
+		ID:       1,
+		LastSeen: time.Now(),
+	}
+
+	json.Marshal(u1)
+	//fmt.Println(string(b1))
+}
 func TestJsonMarshal(t *testing.T) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.Encode(

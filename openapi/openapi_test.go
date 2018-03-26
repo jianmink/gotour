@@ -2,8 +2,9 @@ package openapi
 
 import (
 	"testing"
+	//"fmt"
+	//"strings"
 	"fmt"
-	"strings"
 )
 
 var specJSON = `{
@@ -52,7 +53,9 @@ func TestSpec(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	fmt.Println(strings.Join(a,"\n"))
+	for _, v := range a {
+		fmt.Println(v.String())
+	}
 }
 
 func TestDecodeSpecFile(t *testing.T) {
@@ -61,4 +64,10 @@ func TestDecodeSpecFile(t *testing.T) {
 
 func TestDecodeSpecFile2(t *testing.T) {
 	DecodeSpecFile("oafish_ausf-nausf_ue_authentication_service_v3_swagger.json", "ausf.go")
+}
+
+
+func TestDecodeSpecFile3(t *testing.T) {
+	DecodeSpecFile("Nrf-nf_management_service_v1_swagger_version_04_pa3.yaml",
+		"nrf.go")
 }
