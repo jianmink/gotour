@@ -64,13 +64,7 @@ func DecodeSpecFile(sf string, df string) error {
 	return nil
 }
 
-func DecodeSpec(s string) ([]TJsonStruct, error) {
-
-	// reset types create from the spec
-	typesNew = map[string]string {
-
-	}
-
+func DecodeSpec(s string) ([]OpenApiStruct, error) {
 
 	// paths and components are must in openAPI spec 3.0
 	type Spec struct {
@@ -95,13 +89,13 @@ func DecodeSpec(s string) ([]TJsonStruct, error) {
 	//
 	//}
 
-	var a []TJsonStruct
+	var a []OpenApiStruct
 	for k, v := range data.Components.Schemas {
 		r := DecodeSchema(k, string(*v))
 		a = append(a,r)
 	}
 
-	// set TJsonStruct.IsStruct
+	// set OpenApiStruct.IsStruct
 	for i, t1 := range a {
 		for j,f1 := range t1.Fields {
 			for _, t2 := range a {

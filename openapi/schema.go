@@ -6,46 +6,79 @@ import (
 	"strings"
 )
 
-var GoType  = map[string]string{
-	"string": "string",
+
+
+var JsonType2GoType = map[string]string{
+	"string":  "string",
 	"integer": "int",
 	"boolean": "bool",
-	"array":   "array",   //todo, not support array yet
+	"array":   "array",
 	"object":  "struct",
-	"number":  "float",   //todo, not support number yet
+	"number":  "float", //todo, not support number yet
 }
 
-var JsonType = map[string]string {
+var GoType2JsonType = map[string]string{
 	"string": "string",
-	"int":"integer",
-	"bool":"boolean",
-	"struct":"object",
+	"int":    "integer",
+	"bool":   "boolean",
+	"struct": "object",
 }
 
-// "xxx: array"
-var typesNew = map[string]string {
+// GetGoType return the Golang Type of the input Json/openapi Type
+func GetGoType(jsonType string) string {
 
+	if t, ok := JsonType2GoType[jsonType]; ok {
+		return t
+	} else {
+		return fmt.Sprintf("unknown json type %s", t)
+	}
+
+	return ""
 }
 
-type TJsonField struct{
-	Object string
-	Type string
+// GetJsonType return the Json/openapi type of the input Golang type
+func GetJsonType(goType string) string {
+
+	if t, ok := GoType2JsonType[goType]; ok {
+		return t
+	} else {
+		return fmt.Sprintf("unknown json type %s", t)
+	}
+
+	return ""
+}
+
+
+// OpenApiField stands for an attribute/field in openapi struct
+//   <Name> <Type> <Tag>
+type OpenApiField struct{
+	Name string			// name of the filed
+	Type string			//
 	Tag string
-	IsStructType bool
-	IsMust	bool
-	IsArray bool
+	IsStructType bool	// true if the type refers to a struct
+	IsMust	bool		// true if Name is in the required list
+	IsArray bool		// true if the filed has array decorator:
+						//			case 1) the field is array
+						//			case 2) the Type is array  --> set it through scanning the type definition
 }
 
-type TJsonStruct struct{
-	Name string
+// OpenApiStruct stands for an openapi type definition
+// 		type <Name> struct  { <fields> }
+//      type <Name> <Type>
+type OpenApiStruct struct{
+	Name string		// name of the type definition
 
-	Fields []TJsonField  //for type xxx struct
+	Type string		// possible values are:  "struct" or a concrete type definition, e.g. T5gVector
 
-	Type string   //for built-in type
+	Fields []OpenApiField  // Fields are valid only if the type is a struct
+
+	IsArrayType  bool   // decorator: the type is an array instead of an simple type
+
 }
 
+// IsJsonStructBlob return true is the input json string refer to an openapi struct definition
+func IsJsonStuctBlob(b string ) bool {
 
-func IsStuctBlob(b string ) bool {
 	if strings.ContainsAny(b, "properties") {
 		return true
 	}
@@ -53,8 +86,9 @@ func IsStuctBlob(b string ) bool {
 	return false
 }
 
-func DecodeSchema (name string, p string) TJsonStruct {
-	//fmt.Printf("schema %v\n", name)
+// DecodeSchema() decode the input schema of json format, then return an OpenApiStruct object.
+func DecodeSchema (name string, p string) OpenApiStruct {
+
 	d,err := DecodeJsonMap([]byte(p))
 	if err != nil {
 		fmt.Println(err.Error())
@@ -69,28 +103,29 @@ func DecodeSchema (name string, p string) TJsonStruct {
 
 	switch t {
 	case "object":
-		return decodeStruct(name, p)
+		return decodeSimpleStruct(name, p)
 	case "array":
-		// field or struct
-		if IsStuctBlob(p) {
+		if IsJsonStuctBlob(p) {
 			return decodeArrayStruct(name, p)
 		} else {
-			fmt.Println("a standalone schema shal be an field")
+			fmt.Println("not an valid struct string")
 		}
 
 	default:
 	}
 
-	r := TJsonStruct{
-		Name: renameType(name),
-		Type: GoType[t],
+	// It is a trivial struct
+	r := OpenApiStruct{
+		Name: addTypeDecorator(name),
+		Type: GetGoType(t),
 	}
 
 	return r
 }
 
 
-func (t *TJsonStruct)String()string{
+// String() OpenApiStruct to string
+func (t *OpenApiStruct)String()string{
 	if t.Type != "" {
 		return fmt.Sprintf("\ntype %v %v \n", t.Name, t.Type)
 	}
@@ -113,7 +148,7 @@ func (t *TJsonStruct)String()string{
 
 
 			str += fmt.Sprintf(
-				"\t%-20v%-20v %v\n", f.Object, theType, f.Tag)
+				"\t%-20v %-20v %v\n", f.Name, theType, f.Tag)
 
 		}
 
@@ -123,7 +158,8 @@ func (t *TJsonStruct)String()string{
 	return str
 }
 
-func decodeArrayStruct(name,p string) TJsonStruct{
+// decodeArrayStruct return an OpenApiStruct object for openapi array schema
+func decodeArrayStruct(name,p string) OpenApiStruct {
 	var data struct {
 		Type       string `json:"type"`
 		Items json.RawMessage `json:"items"`
@@ -132,18 +168,18 @@ func decodeArrayStruct(name,p string) TJsonStruct{
 	err := json.Unmarshal([]byte(p), &data)
 	if err != nil {
 		fmt.Printf("error: %v\n", err.Error())
-		return TJsonStruct{}
+		return OpenApiStruct{}
 	}
 
 	r := DecodeSchema(name, string(data.Items))
 
-	typesNew[name]=data.Type
+	r.IsArrayType = true
 
 	return r
-	//return r + "\n" + goArray(name, name)
 }
 
-func decodeStruct(name string, p string) TJsonStruct {
+// decodeSimpleStruct return an OpenApiStruct object for a simple openapi schema
+func decodeSimpleStruct(name string, p string) OpenApiStruct {
 	var data struct {
 		Type       string `json:"type"`
 		Properties map[string] *json.RawMessage `json:"properties"`
@@ -152,30 +188,30 @@ func decodeStruct(name string, p string) TJsonStruct {
 	err := json.Unmarshal([]byte(p), &data)
 	if err != nil {
 		fmt.Printf("error: %v\n", err.Error())
-		return TJsonStruct{}
+		return OpenApiStruct{}
 	}
 
-	var fields = make(map[string]TJsonField)
+	var fields = make(map[string]OpenApiField)
 	for k,v := range data.Properties {
 		//t,isArray := decodeFieldType(string(*v))
 		t,isArray := decodeFieldType(string(*v))
 
-		theObject := renameObject(k)
-		theType := renameType(t)
+		theName := addFieldNameDecorator(k)
+		theType := addTypeDecorator(t)
 		theJsonObject := k
 
-		var f = TJsonField{
-			Object:       theObject,
+		var f = OpenApiField{
+			Name:         theName,
 			Type:         theType,
 			Tag:          "",// fmt.Sprintf("`json:\"%v\"`", theJsonObject),
-			IsStructType: true,
+			IsStructType: false,
 			IsMust:       false,
-			IsArray: isArray,
+			IsArray:      isArray,
 		}
 
 		//fmt.Println(f)
-		if _,ok := JsonType[theType]; ok {
-			f.IsStructType = false
+		if _,ok := GoType2JsonType[theType]; !ok {
+			f.IsStructType = true
 		}
 
 		if has(theJsonObject, data.Required) {
@@ -196,6 +232,8 @@ func decodeStruct(name string, p string) TJsonStruct {
 
 }
 
+
+// decodeFieldType() return the field's type
 func decodeFieldType (s string) (string, bool){
 	var data map[string]*json.RawMessage
 	err := json.Unmarshal([]byte(s), &data)
@@ -205,22 +243,23 @@ func decodeFieldType (s string) (string, bool){
 	}
 
 	isArray := false
+	if t,ok := data["type"]; ok {
+		tmp := strings.Trim(string(*t), "\"")
+		if t1 := GetGoType(tmp); t1 != "array" {
+			if tmp == "object" {
+				fmt.Println("field with object type (generic type) --> go type: string")
+				return "string", false
+			} else {
+				return t1, false
+			}
+		} else {
+			isArray = true
+		}
+	}
+
+
 	for k, v := range data {
 		tmp := string(*v)
-		if k == "type" {
-			tmp = strings.Trim(tmp, "\"")
-			if t, ok := GoType[tmp]; ok {
-				if t != "array" {
-					return t, false
-				} else {
-					isArray = true
-					continue
-				}
-			} else {
-				return "unknown", false
-			}
-		}
-
 		if k == "items" {
 			if isArray {
 				t0,_ :=decodeFieldType(tmp)
@@ -235,26 +274,31 @@ func decodeFieldType (s string) (string, bool){
 			return s[len(s)-1], false
 		}
 
+		if k == "oneOf" {
+			fmt.Println("todo: how to translate 'oneof' key word. set it as string type temporary")
+			return "string", false
+		}
+
 	}
 
 	return "", false
 }
 
-func goArray (name string, t string) string {
+//func goArray (name string, t string) string {
+//
+//	theObject := addFieldNameDecorator(name)
+//	theType := addTypeDecorator(t)
+//	theJsonObject := name
+//
+//	r := fmt.Sprintf("\t%v\t[]%v\t `json:\"%v,omitempty\"`\n", theObject, theType, theJsonObject)
+//
+//	return r
+//}
 
-	theObject := renameObject(name)
-	theType := renameType(t)
-	theJsonObject := name
+func goStruct2 (name string, fields map[string]OpenApiField) OpenApiStruct {
+	var t OpenApiStruct
 
-	r := fmt.Sprintf("\t%v\t[]%v\t `json:\"%v,omitempty\"`\n", theObject, theType, theJsonObject)
-
-	return r
-}
-
-func goStruct2 (name string, fields map[string]TJsonField ) TJsonStruct {
-	var t TJsonStruct
-
-	t.Name = renameType(name)
+	t.Name = addTypeDecorator(name)
 
 	for _, v := range fields {
 		t.Fields = append(t.Fields, v)
@@ -263,37 +307,16 @@ func goStruct2 (name string, fields map[string]TJsonField ) TJsonStruct {
 	return t
 }
 
-//func goStruct (name string, fields map[string]string, required []string) string {
-//	t := fmt.Sprintf("type %v struct { \n", renameType(name))
-//
-//	for k, v := range fields {
-//
-//		theObject := renameObject(k)
-//		theType := renameType(v)
-//		theJsonObject := k
-//
-//		if has(k, required) {
-//			s := fmt.Sprintf("\t%v\t%v\t `json:\"%v\"`\n", theObject, theType, theJsonObject)
-//			t += s
-//		} else {
-//			s := fmt.Sprintf("\t%v\t%v\t `json:\"%v,omitempty\"`\n", theObject, theType, theJsonObject)
-//			t += s
-//		}
-//	}
-//
-//	t += "\n}"
-//	return t
-//}
-
-
-func renameObject(s string) string {
+// addFieldNameDecorator()
+func addFieldNameDecorator(s string) string {
 
 	s = strings.Trim(s," ")
-	if _,ok := JsonType[s]; ok {
+
+	if _,ok := GoType2JsonType[s]; ok {
 		return s
 	}
 
-	if _,ok := GoType[s]; ok {
+	if _,ok := JsonType2GoType[s]; ok {
 		return s
 	}
 
@@ -307,21 +330,22 @@ func renameObject(s string) string {
 	return r
 }
 
-func renameType(s string) string {
+// addTypeDecorator() add "T" for stuct
+func addTypeDecorator(s string) string {
 
 	s = strings.Trim(s," ")
-	if _,ok := JsonType[s]; ok {
+	if _,ok := GoType2JsonType[s]; ok {
 		return s
 	}
 
-	if _,ok := GoType[s]; ok {
+	if _,ok := JsonType2GoType[s]; ok {
 		return s
 	}
 
-	return "T_" + s
+	return "T" + s
 }
 
-
+// has() return true if s is in the given list; otherwise return false
 func has(s string, list []string) bool {
 	s = strings.Trim(s, " ")
 	for _, v := range list {

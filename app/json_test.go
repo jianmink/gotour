@@ -9,25 +9,33 @@ import (
 )
 
 
-type Address struct {
-	road string
-	building string
+type Address1 struct {
+	Road string   `json:"road"`
+	Building string `json:"building,omitempty"`
 }
 
 type MyUser struct {
 	ID       int64     `json:"id"`
 	Name     string    `json:"name,omitempty"`
-	Addr	 []Address  `json:"address,omitempty"`
-	LastSeen time.Time `json:"lastSeen"`
+	Addr	 Address1  `json:"address"`
+	LastSeen time.Time `json:"lastSeen,omitempty"`
 }
 
 func TestJsonMismatch(t *testing.T) {
-	byt := []byte(`{"ID":2,"Name":"mike"}`)
-	//var dat map[string]interface{}
+	byt := []byte(`{
+				"id":3,
+				"name":"mike",
+				"address": {"road": "road-1", "building": "B1"}
+				}`)
+
 	var u2 = MyUser{}
-	json.Unmarshal(byt, &u2)
+	err := json.Unmarshal(byt, &u2)
+	if err !=nil {
+		fmt.Println(err.Error())
+	}
 
 	fmt.Println(u2)
+	//fmt.Println(u2.Addr)
 }
 
 func TestJsonMarsha0(t *testing.T) {

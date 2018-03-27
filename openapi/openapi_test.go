@@ -59,15 +59,15 @@ func TestSpec(t *testing.T) {
 }
 
 func TestDecodeSpecFile(t *testing.T) {
-	DecodeSpecFile("udm_auth.json","udm.go")
+	DecodeSpecFile("udm_auth.json","output/udm.go")
 }
 
 func TestDecodeSpecFile2(t *testing.T) {
-	DecodeSpecFile("oafish_ausf-nausf_ue_authentication_service_v3_swagger.json", "ausf.go")
+	DecodeSpecFile("oafish_ausf-nausf_ue_authentication_service_v3_swagger.json", "output/ausf.go")
 }
 
 
 func TestDecodeSpecFile3(t *testing.T) {
 	DecodeSpecFile("Nrf-nf_management_service_v1_swagger_version_04_pa3.yaml",
-		"nrf.go")
+		"output/nrf.go")
 }

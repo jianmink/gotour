@@ -165,3 +165,69 @@ func TestDecodeSchema7(t *testing.T) {
 
 	fmt.Println(r.String())
 }
+
+func TestDecodeSchema8(t *testing.T) {
+	p := `{
+			"required": [
+				"nfInstanceID",
+				"nfType"
+			],
+			"properties": {
+				"fqdn": {
+					"type": "string"
+				},
+				"ipAddress": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"capacity": {
+					"type": "integer"
+				}
+			}}`
+
+	r := DecodeSchema("NFProfile", p)
+
+	fmt.Println(r.String())
+}
+
+func TestDecodeSchema9(t *testing.T) {
+	p := `{
+		"properties": {
+			"notificationBody": {
+				"oneOf": [
+					{
+						"$ref": "#/components/schemas/Registration"
+					},
+					{
+						"$ref": "#/components/schemas/ProfileChange"
+					},
+					{
+						"$ref": "#/components/schemas/Deregistration"
+					}
+				]
+			}
+		}
+	}`
+
+	r := DecodeSchema("NotificationData", p)
+
+	fmt.Println(r.String())
+}
+
+func TestDecodeSchema10(t *testing.T) {
+	p := `{
+		"properties": {
+			"value": {
+				"type": "object"
+			}
+		}
+	}`
+
+	r := DecodeSchema("PatchItem", p)
+
+	fmt.Println(r.String())
+}
+
+
