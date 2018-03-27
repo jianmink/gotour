@@ -123,6 +123,18 @@ func DecodeSchema (name string, p string) OpenApiStruct {
 	return r
 }
 
+// NewOpenApiStruct() return a OpenApiStruct object
+func NewOpenApiStruct(name string, fields map[string]OpenApiField) OpenApiStruct {
+	var t OpenApiStruct
+
+	t.Name = addTypeDecorator(name)
+
+	for _, v := range fields {
+		t.Fields = append(t.Fields, v)
+	}
+
+	return t
+}
 
 // String() OpenApiStruct to string
 func (t *OpenApiStruct)String()string{
@@ -227,9 +239,7 @@ func decodeSimpleStruct(name string, p string) OpenApiStruct {
 		fields[k] = f
 	}
 
-	return goStruct2(name, fields)
-
-
+	return NewOpenApiStruct(name, fields)
 }
 
 
@@ -284,41 +294,10 @@ func decodeFieldType (s string) (string, bool){
 	return "", false
 }
 
-//func goArray (name string, t string) string {
-//
-//	theObject := addFieldNameDecorator(name)
-//	theType := addTypeDecorator(t)
-//	theJsonObject := name
-//
-//	r := fmt.Sprintf("\t%v\t[]%v\t `json:\"%v,omitempty\"`\n", theObject, theType, theJsonObject)
-//
-//	return r
-//}
-
-func goStruct2 (name string, fields map[string]OpenApiField) OpenApiStruct {
-	var t OpenApiStruct
-
-	t.Name = addTypeDecorator(name)
-
-	for _, v := range fields {
-		t.Fields = append(t.Fields, v)
-	}
-
-	return t
-}
-
-// addFieldNameDecorator()
+// addFieldNameDecorator() change the first c to uppercase, add prefix "A" if the first c is a digit
 func addFieldNameDecorator(s string) string {
 
 	s = strings.Trim(s," ")
-
-	if _,ok := GoType2JsonType[s]; ok {
-		return s
-	}
-
-	if _,ok := JsonType2GoType[s]; ok {
-		return s
-	}
 
 	r := strings.ToUpper(s[0:1]) + s[1:]
 
@@ -354,4 +333,20 @@ func has(s string, list []string) bool {
 		}
 	}
 	return false
+}
+
+
+func DecodeJsonMap(v  []byte) (map[string]*json.RawMessage, error){
+	var data map[string]*json.RawMessage
+	err := json.Unmarshal(v, &data)
+	if err != nil {
+		fmt.Errorf("error: %v", err.Error())
+		return nil, err
+	} else {
+		//for k, v := range data {
+		//	fmt.Printf("key[%v] value[%v]\n", k, string(*v))
+		//}
+	}
+
+	return data, nil
 }

@@ -9,9 +9,10 @@ import (
 	"github.com/ghodss/yaml"
 	"path/filepath"
 	"errors"
+	"os"
 )
 
-
+// yaml2json translate bytes from yaml format  to json format
 func yaml2json(y []byte) []byte {
 	j, err := yaml.YAMLToJSON(y)
 	if err != nil {
@@ -22,15 +23,21 @@ func yaml2json(y []byte) []byte {
 	return j
 }
 
-func DecodeSpecFile(sf string, df string) error {
-	b,err := ioutil.ReadFile(sf)
+// DecodeSpecFile() input is the spec file, target is the dest go file
+//		input:
+//			openapi spec file of json or yaml format
+//		output:
+//		  	.../<package_name>/struct.go
+//		  	package_name shall contain the service name and api version, e.g. ausfv1
+func DecodeSpecFile(srcFile, destFolder, serviceName, apiVersion string) error {
+	b,err := ioutil.ReadFile(srcFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		return err
 	}
 
 	// support both .json and .yaml/.yml
-	switch ext:=filepath.Ext(sf); ext {
+	switch ext:=filepath.Ext(srcFile); ext {
 	case ".json":
 		break
 	case ".yaml":
@@ -54,16 +61,24 @@ func DecodeSpecFile(sf string, df string) error {
 		a1 = append(a1, v.String())
 	}
 
+	// output to target file
+	df := destFolder + "/" + serviceName + apiVersion
+
 	if df != "" {
-		tmp := []string{"package openapi"}
+		tmp := []string{"package "+ serviceName +apiVersion}
 		a2 := append (tmp, a1...)
-		return ioutil.WriteFile(df, []byte(strings.Join(a2, "\n")), 0644)
+
+		//create folder
+
+		os.MkdirAll(df,0777)
+		return ioutil.WriteFile(df+"/struct.go", []byte(strings.Join(a2, "\n")), 0644)
 	}
-	//
-	//fmt.Println(strings.Join(a, "\n"))
+
 	return nil
 }
 
+//  DecodeSpec() decode openapi spec in json string
+//
 func DecodeSpec(s string) ([]OpenApiStruct, error) {
 
 	// paths and components are must in openAPI spec 3.0
@@ -95,7 +110,7 @@ func DecodeSpec(s string) ([]OpenApiStruct, error) {
 		a = append(a,r)
 	}
 
-	// set OpenApiStruct.IsStruct
+	// set IsStruct for each field
 	for i, t1 := range a {
 		for j,f1 := range t1.Fields {
 			for _, t2 := range a {
@@ -106,50 +121,17 @@ func DecodeSpec(s string) ([]OpenApiStruct, error) {
 		}
 	}
 
-	return a, err
-}
-
-func addArrayMark(a string, t string ) string {
-
-
-	return ""
-}
-
-
-func DecodeJsonMap(v  []byte) (map[string]*json.RawMessage, error){
-	var data map[string]*json.RawMessage
-	err := json.Unmarshal(v, &data)
-	if err != nil {
-		fmt.Errorf("error: %v", err.Error())
-		return nil, err
-	} else {
-		//for k, v := range data {
-		//	fmt.Printf("key[%v] value[%v]\n", k, string(*v))
-		//}
+	// set IsArray for each field
+	for i, t1 := range a {
+		for j,f1 := range t1.Fields {
+			for _, t2 := range a {
+				if f1.Type == t2.Name && t2.IsArrayType {
+					a[i].Fields[j].IsArray = true
+				}
+			}
+		}
 	}
 
-	return data, nil
+	return a, err
 }
-
-//func DecodeProperty(name string, data map[string]*json.RawMessage) Property {
-//	var p = Property{Name: name }
-//	if v,ok := data["$ref"]; ok {
-//		s := strings.Split(string(*v),"\\")
-//		p.Type = s[len(s)-1]
-//	}
-//	return p
-//}
-//
-//
-//type Property struct {
-//	Name string
-//	Type string
-//}
-
-//type Schema struct {
-//	Name string
-//	Type string
-//	Properties Property
-//	Required []string
-//}
 

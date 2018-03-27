@@ -1,0 +1,4 @@
+
+# swagger.exe ./udm_auth.json ./output udm v1
+input: ./udm_auth.json, output: ./output/udmv1/struct.go
+
